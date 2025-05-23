@@ -1,0 +1,11 @@
+const SEAT_STATUS = {
+  AVAILABLE: 'AVAILABLE',
+  BOOKED: 'BOOKED',
+  UNAVAILABLE: 'UNAVAILABLE',
+  VIP_0: 'VIP-0',
+  VIP_10: 'VIP-10'
+};
+
+Object.freeze(SEAT_STATUS);
+
+module.exports = SEAT_STATUS;
