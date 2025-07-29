@@ -3,6 +3,7 @@ const mongoose    = require('mongoose');
 const Seat        = require('~/models/Seat');
 const Reservation = require('~/models/Reservation');
 const { SEAT_STATUS, PROGRAM_BOOK_PRICE } = require('~/constants');
+const { emitSeatUpdated } = require('~/utils/socketUtils');
 
 exports.createReservation = async (req, res) => {
   const { userName, seatLabels = [], programBookCount = 0 } = req.body;
@@ -51,6 +52,9 @@ exports.createReservation = async (req, res) => {
 
     await session.commitTransaction();
     session.endSession();
+
+    // Emit seat update to all clients
+    emitSeatUpdated();
 
     res.json({ reservedSeats: seats.map(s => ({ row: s.row, col: s.col, price: s.price })), programBookCount, totalPrice });
 
@@ -109,6 +113,9 @@ exports.deleteReservation = async (req, res) => {
 
     await session.commitTransaction();
     session.endSession();
+
+    // Emit seat update to all clients
+    emitSeatUpdated();
 
     res.json({ message, deleteType: hard === 'true' || hard === true ? 'hard' : 'soft' });
 
@@ -200,6 +207,9 @@ exports.editReservation = async (req, res) => {
 
     await session.commitTransaction();
     session.endSession();
+
+    // Emit seat update to all clients
+    emitSeatUpdated();
 
     res.json({ 
       reservedSeats: seats.map(s => ({ row: s.row, col: s.col, price: s.price })), 

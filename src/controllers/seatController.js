@@ -1,6 +1,7 @@
 const Seat = require('~/models/Seat');
 const Reservation = require('~/models/Reservation');
 const { SEAT_STATUS } = require('~/constants');
+const { emitSeatUpdated } = require('~/utils/socketUtils');
 
 exports.getAllSeats = async (req, res) => {
   try {
@@ -60,6 +61,11 @@ exports.editSeats = async (req, res) => {
       if (updatedSeat) {
         updatedSeats.push(updatedSeat);
       }
+    }
+
+    // Emit seat update to all clients if any seats were updated
+    if (updatedSeats.length > 0) {
+      emitSeatUpdated();
     }
 
     res.json({
