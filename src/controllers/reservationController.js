@@ -7,40 +7,54 @@ const { emitSeatUpdated } = require('~/utils/socketUtils');
 
 exports.createReservation = async (req, res) => {
   const { userName, seatLabels = [], programBookCount = 0 } = req.body;
-  if (!userName || !seatLabels.length) {
-    return res.status(400).json({ message: 'userName & seatLabels 為必填' });
+  
+  // Validate that userName is provided and either seats or program books are requested
+  if (!userName) {
+    return res.status(400).json({ message: 'userName 為必填' });
+  }
+  
+  if (!seatLabels.length && !programBookCount) {
+    return res.status(400).json({ message: '必須選擇座位或購買節目冊' });
   }
 
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const seats = await Seat.find({
-      $expr: {
-        $in: [{ $concat: ["$row", { $toString: "$col" }] }, seatLabels]
-      },
-      status: SEAT_STATUS.AVAILABLE
-    }).session(session);
+    let seats = [];
+    let seatsTotal = 0;
 
-    if (seats.length !== seatLabels.length) {
-      await session.abortTransaction();
-      return res.status(409).json({
-        message: '部分座位已無法選擇',
-        unavailable: seatLabels.filter(l => !seats.find(s => s.row + s.col === l))
-      });
+    // Only process seats if seatLabels are provided
+    if (seatLabels.length > 0) {
+      seats = await Seat.find({
+        $expr: {
+          $in: [{ $concat: ["$row", { $toString: "$col" }] }, seatLabels]
+        },
+        status: SEAT_STATUS.AVAILABLE
+      }).session(session);
+
+      if (seats.length !== seatLabels.length) {
+        await session.abortTransaction();
+        return res.status(409).json({
+          message: '部分座位已無法選擇',
+          unavailable: seatLabels.filter(l => !seats.find(s => s.row + s.col === l))
+        });
+      }
+
+      seatsTotal = seats.reduce((sum, s) => sum + s.price, 0);
+
+      // Book the seats
+      await Seat.updateMany(
+        { $expr: {
+          $in: [{ $concat: ["$row", { $toString: "$col" }] }, seatLabels]
+        } },
+        { $set: { status: SEAT_STATUS.BOOKED, reservedBy: userName } },
+        { session }
+      );
     }
 
-    const seatsTotal = seats.reduce((sum, s) => sum + s.price, 0);
     const booksTotal = programBookCount * PROGRAM_BOOK_PRICE;
     const totalPrice = seatsTotal + booksTotal;
-
-    await Seat.updateMany(
-      { $expr: {
-        $in: [{ $concat: ["$row", { $toString: "$col" }] }, seatLabels]
-      } },
-      { $set: { status: SEAT_STATUS.BOOKED, reservedBy: userName } },
-      { session }
-    );
 
     const reservation = new Reservation({
       userName,
@@ -53,10 +67,16 @@ exports.createReservation = async (req, res) => {
     await session.commitTransaction();
     session.endSession();
 
-    // Emit seat update to all clients
-    emitSeatUpdated();
+    // Emit seat update to all clients if seats were booked
+    if (seats.length > 0) {
+      emitSeatUpdated();
+    }
 
-    res.json({ reservedSeats: seats.map(s => ({ row: s.row, col: s.col, price: s.price })), programBookCount, totalPrice });
+    res.json({ 
+      reservedSeats: seats.map(s => ({ row: s.row, col: s.col, price: s.price })), 
+      programBookCount, 
+      totalPrice 
+    });
 
   } catch (err) {
     await session.abortTransaction();
