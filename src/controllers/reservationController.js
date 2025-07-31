@@ -228,7 +228,7 @@ exports.editReservation = async (req, res) => {
 
 exports.getAllReservations = async (req, res) => {
   try {
-    const reservations = await Reservation.find({ isDeleted: { $ne: true } })
+    const reservations = await Reservation.find()
       .populate('seatIds', 'row col price')
       .sort({ createdAt: -1 });
     res.json(reservations);
