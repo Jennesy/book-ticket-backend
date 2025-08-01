@@ -4,9 +4,10 @@ const Seat        = require('~/models/Seat');
 const Reservation = require('~/models/Reservation');
 const { SEAT_STATUS, PROGRAM_BOOK_PRICE } = require('~/constants');
 const { emitSeatUpdated } = require('~/utils/socketUtils');
+const { syncToSheet } = require('~/utils/sheetSync');
 
 exports.createReservation = async (req, res) => {
-  const { userName, seatLabels = [], programBookCount = 0 } = req.body;
+  const { userName, seatLabels = [], programBookCount = 0, account = '' } = req.body;
   
   // Validate that userName is provided and either seats or program books are requested
   if (!userName) {
@@ -70,6 +71,19 @@ exports.createReservation = async (req, res) => {
     // Emit seat update to all clients if seats were booked
     if (seats.length > 0) {
       emitSeatUpdated();
+    }
+
+    // Sync to Google Sheets
+    try {
+      await syncToSheet({
+        userName,
+        seats: seats.map(s => ({ row: s.row, col: s.col, price: s.price })),
+        totalPrice,
+        programBookCount,
+        account
+      });
+    } catch (error) {
+      console.error('Sheet sync error (non-blocking):', error);
     }
 
     res.json({ 
