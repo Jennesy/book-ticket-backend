@@ -15,6 +15,22 @@ async function emitSeatUpdated() {
   }
 }
 
+/**
+ * Emit booking status change to all connected clients
+ * @param {boolean} open - Whether booking is open or closed
+ */
+function emitBookingStatusChanged(open) {
+  try {
+    if (global.io) {
+      global.io.emit('bookingStatusChanged', { open });
+      console.log(`📡 Emitted bookingStatusChanged: ${open ? 'OPEN' : 'CLOSED'}`);
+    }
+  } catch (error) {
+    console.error('Error emitting booking status change:', error);
+  }
+}
+
 module.exports = {
-  emitSeatUpdated
+  emitSeatUpdated,
+  emitBookingStatusChanged
 };

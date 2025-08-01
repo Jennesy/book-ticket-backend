@@ -7,6 +7,7 @@ const { Server }          = require('socket.io');
 const connectDB           = require('~/config/db');
 const seatRoutes          = require('~/routes/seatRoutes');
 const reservationRoutes   = require('~/routes/reservationRoutes');
+const settingsRoutes      = require('~/routes/settingsRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -46,6 +47,7 @@ connectDB();
 
 app.use('/api/seats', seatRoutes);
 app.use('/api/reserve', reservationRoutes);
+app.use('/api/settings', settingsRoutes);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on ${PORT}`));
