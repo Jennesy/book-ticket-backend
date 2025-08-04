@@ -20,9 +20,9 @@ async function resetAllData() {
       const deleteResult = await Reservation.deleteMany({}).session(session);
       console.log(`Deleted ${deleteResult.deletedCount} reservations`);
 
-      // Reset all seats to available
+      // Reset only BOOKED seats to available and clear reservedBy
       const updateResult = await Seat.updateMany(
-        {},
+        { status: SEAT_STATUS.BOOKED },
         {
           $set: {
             status: SEAT_STATUS.AVAILABLE,
@@ -31,7 +31,7 @@ async function resetAllData() {
         },
         { session }
       );
-      console.log(`Updated ${updateResult.modifiedCount} seats to available`);
+      console.log(`Updated ${updateResult.modifiedCount} booked seats to available`);
 
       await session.commitTransaction();
       console.log('✅ All reservations deleted and seats reset successfully');
