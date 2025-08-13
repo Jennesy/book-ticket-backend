@@ -5,9 +5,10 @@ const Reservation = require('~/models/Reservation');
 const { SEAT_STATUS, PROGRAM_BOOK_PRICE } = require('~/constants');
 const { emitSeatUpdated } = require('~/utils/socketUtils');
 const { syncToSheet } = require('~/utils/sheetSync');
+const { calculateOrderPrice } = require('~/utils/discountCalculator');
 
 exports.createReservation = async (req, res) => {
-  const { userName, seatLabels = [], programBookCount = 0, account = '' } = req.body;
+  const { userName, seatLabels = [], programBookCount = 0, account = '', isMember = false } = req.body;
   
   // Validate that userName is provided and either seats or program books are requested
   if (!userName) {
@@ -54,8 +55,14 @@ exports.createReservation = async (req, res) => {
       );
     }
 
-    const booksTotal = programBookCount * PROGRAM_BOOK_PRICE;
-    const totalPrice = seatsTotal + booksTotal;
+    // Calculate price with discounts
+    const priceCalculation = calculateOrderPrice(
+      seats.map(s => ({ row: s.row, col: s.col, price: s.price })),
+      programBookCount,
+      isMember
+    );
+    
+    const totalPrice = priceCalculation.discountedTotal;
 
     const reservation = new Reservation({
       userName,
@@ -80,7 +87,9 @@ exports.createReservation = async (req, res) => {
         seats: seats.map(s => ({ row: s.row, col: s.col, price: s.price })),
         totalPrice,
         programBookCount,
-        account
+        account,
+        isMember,
+        priceDetails: priceCalculation
       });
     } catch (error) {
       console.error('Sheet sync error (non-blocking):', error);
@@ -89,7 +98,9 @@ exports.createReservation = async (req, res) => {
     res.json({ 
       reservedSeats: seats.map(s => ({ row: s.row, col: s.col, price: s.price })), 
       programBookCount, 
-      totalPrice 
+      totalPrice,
+      priceDetails: priceCalculation,
+      isMember
     });
 
   } catch (err) {
@@ -163,7 +174,7 @@ exports.deleteReservation = async (req, res) => {
 
 exports.editReservation = async (req, res) => {
   const { reservationId } = req.params;
-  const { userName, seatLabels = [], programBookCount = 0 } = req.body;
+  const { userName, seatLabels = [], programBookCount = 0, isMember = false } = req.body;
   
   if (!userName || !seatLabels.length) {
     return res.status(400).json({ message: 'userName & seatLabels 為必填' });
@@ -215,10 +226,14 @@ exports.editReservation = async (req, res) => {
       });
     }
 
-    // Calculate new price
-    const seatsTotal = seats.reduce((sum, s) => sum + s.price, 0);
-    const booksTotal = programBookCount * PROGRAM_BOOK_PRICE;
-    const totalPrice = seatsTotal + booksTotal;
+    // Calculate new price with discounts
+    const priceCalculation = calculateOrderPrice(
+      seats.map(s => ({ row: s.row, col: s.col, price: s.price })),
+      programBookCount,
+      isMember
+    );
+    
+    const totalPrice = priceCalculation.discountedTotal;
 
     // Book new seats
     await Seat.updateMany(
@@ -249,6 +264,8 @@ exports.editReservation = async (req, res) => {
       reservedSeats: seats.map(s => ({ row: s.row, col: s.col, price: s.price })), 
       programBookCount, 
       totalPrice,
+      priceDetails: priceCalculation,
+      isMember,
       newReservationId: newReservation._id
     });
 
