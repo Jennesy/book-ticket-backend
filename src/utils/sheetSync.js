@@ -25,7 +25,7 @@ async function syncToSheet(reservationData) {
     totalPrice,
     programBookCount,
     userName,
-    account: account || '',
+    account: account ? `'${String(account)}` : '', // 在 account 前加上單引號強制為文字格式
     name: userName,
     date: new Date().toLocaleDateString(),
   };
