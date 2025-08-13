@@ -15,29 +15,32 @@ const discountConfig = {
     discountRate: 0.85
   },
 
-  // 團購優惠 (滿件數折扣)
-  groupDiscount: [
-    {
-      price: 1200,
-      minQuantity: 4,
-      discountRate: 0.9 // 9折
-    },
-    {
-      price: 1000,
-      minQuantity: 6,
-      discountRate: 0.8 // 8折
-    },
-    {
-      price: 800,
-      minQuantity: 8,
-      discountRate: 0.8 // 8折
-    },
-    {
-      price: 400,
-      minQuantity: 4,
-      discountRate: 0.9 // 9折
-    }
-  ]
+  // 團購優惠 (滿件數折扣) - 限時優惠到 2025/9/24
+  groupDiscount: {
+    endDate: '2025-09-24T23:59:59+08:00', // 台灣時間 2025/9/24 23:59:59
+    rules: [
+      {
+        price: 1200,
+        minQuantity: 4,
+        discountRate: 0.9 // 9折
+      },
+      {
+        price: 1000,
+        minQuantity: 6,
+        discountRate: 0.8 // 8折
+      },
+      {
+        price: 800,
+        minQuantity: 8,
+        discountRate: 0.8 // 8折
+      },
+      {
+        price: 400,
+        minQuantity: 4,
+        discountRate: 0.9 // 9折
+      }
+    ]
+  }
 };
 
 module.exports = discountConfig;

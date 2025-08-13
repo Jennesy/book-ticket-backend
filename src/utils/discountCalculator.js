@@ -2,6 +2,16 @@
 const discountConfig = require('~/config/discountConfig');
 
 /**
+ * 檢查團購優惠是否仍在有效期內
+ * @returns {boolean} 團購優惠是否有效
+ */
+function isGroupDiscountActive() {
+  const now = new Date();
+  const groupDiscountEndDate = new Date(discountConfig.groupDiscount.endDate);
+  return now <= groupDiscountEndDate;
+}
+
+/**
  * 計算節目冊總價
  * @param {number} quantity - 節目冊數量
  * @param {boolean} isMember - 是否為團員
@@ -79,25 +89,28 @@ function calculateSeatsPrice(seats, isMember = false) {
       });
     }
 
-    // 2. 團購優惠（檢查是否滿足條件）
-    const groupDiscountRule = discountConfig.groupDiscount.find(rule => 
-      rule.price === price && quantity >= rule.minQuantity
-    );
-    
-    if (groupDiscountRule) {
-      const groupDiscountedPrice = Math.round(price * groupDiscountRule.discountRate);
+    // 2. 團購優惠（檢查是否滿足條件且在有效期內）
+    if (isGroupDiscountActive()) {
+      const groupDiscountRule = discountConfig.groupDiscount.rules.find(rule => 
+        rule.price === price && quantity >= rule.minQuantity
+      );
       
-      // 如果團購優惠比團員折扣更划算，使用團購優惠
-      if (groupDiscountedPrice < finalPrice) {
-        finalPrice = groupDiscountedPrice;
-        discountInfo = [{
-          type: 'group',
-          description: `滿${groupDiscountRule.minQuantity}張${Math.round((1 - groupDiscountRule.discountRate) * 100)}%折`,
-          originalPrice: price,
-          discountedPrice: finalPrice,
-          minQuantity: groupDiscountRule.minQuantity,
-          actualQuantity: quantity
-        }];
+      if (groupDiscountRule) {
+        const groupDiscountedPrice = Math.round(price * groupDiscountRule.discountRate);
+        
+        // 如果團購優惠比團員折扣更划算，使用團購優惠
+        if (groupDiscountedPrice < finalPrice) {
+          finalPrice = groupDiscountedPrice;
+          discountInfo = [{
+            type: 'group',
+            description: `滿${groupDiscountRule.minQuantity}張${Math.round((1 - groupDiscountRule.discountRate) * 100)}%折 (限時到9/24)`,
+            originalPrice: price,
+            discountedPrice: finalPrice,
+            minQuantity: groupDiscountRule.minQuantity,
+            actualQuantity: quantity,
+            validUntil: discountConfig.groupDiscount.endDate
+          }];
+        }
       }
     }
 
@@ -156,5 +169,6 @@ function calculateOrderPrice(seats, programBookCount, isMember = false) {
 module.exports = {
   calculateProgramBookPrice,
   calculateSeatsPrice,
-  calculateOrderPrice
+  calculateOrderPrice,
+  isGroupDiscountActive
 };
