@@ -33,11 +33,6 @@ const discountConfig = {
         price: 800,
         minQuantity: 8,
         discountRate: 0.8 // 8折
-      },
-      {
-        price: 400,
-        minQuantity: 4,
-        discountRate: 0.9 // 9折
       }
     ]
   }
